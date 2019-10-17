@@ -1,3 +1,4 @@
+ 
 <template>
   <div class="container">
     <div class="col-sm-10">
@@ -23,8 +24,8 @@
         </thead>
 
         <tbody>
-          <tr v-for="(todo, index) in todos" :key="index">
-            <td class="todo-uid">{{ index }}</td>
+          <tr v-for="(todo, index, id) in todos" :key="index">
+            <td class="todo-uid">{{ id = id + 1 }}</td>
             <td>{{ todo.split(",")[0] }}</td>
             <td>
               <span v-if="todo.split(',')[1] == 'true'">Выполнено</span>
@@ -32,13 +33,15 @@
             </td>
             <td>
               <div class="btn-group" role="group">
+
                 <button type="button"
                         class="btn btn-secondary btn-sm"
                         v-b-modal.todo-update-modal
-                        @click="updateTodo(todo)"
+                        @click="updateTodo(index)"
                         >
                     Обновить
                 </button>
+
                 &nbsp;
                 <button type="button"
                         class="btn btn-danger btn-sm"
@@ -50,6 +53,32 @@
           </tr>
         </tbody>
       </table>
+
+
+      <b-modal ref="updateTodoModal"
+               id="todo-update-modal"
+               title="Update"
+               hide-footer>
+        <b-form @submit="onUpdateSubmit" @reset="onUpdateReset" class="w-100">
+        <b-form-group id="form-update-description-group"
+                      label="Описание:"
+                      label-for="form-update-description-input">
+          <b-form-input id="form-update-description-input"
+                        type="text"
+                        required>
+          </b-form-input>
+        </b-form-group>
+        <b-form-group id="form-update-complete-group">
+          <b-form-checkbox-group id="form-update-checks">
+            <b-form-checkbox value="true">Задача выполнена?</b-form-checkbox>
+          </b-form-checkbox-group>
+        </b-form-group>
+        <b-button-group>
+          <b-button type="submit" variant="primary">Обновить</b-button>
+          <b-button type="reset" variant="danger">Сброс</b-button>
+        </b-button-group>
+        </b-form>
+      </b-modal>
 
 
 
@@ -64,14 +93,13 @@
                       label-for="form-description-input">
           <b-form-input id="form-description-input"
                         type="text"
-                        v-model="addTodoForm.description"
                         required
                         placeholder="Завести задачу">
           </b-form-input>
         
         </b-form-group>
         <b-form-group id="form-complete-group">
-          <b-form-checkbox-group v-model="addTodoForm.is_completed" id="form-checks">
+          <b-form-checkbox-group id="form-checks">
             <b-form-checkbox value="true">Задача выполнена?</b-form-checkbox>
           </b-form-checkbox-group>
           
@@ -84,54 +112,21 @@
 
 
 
-      <b-modal ref="updateTodoModal"
-               id="todo-update-modal"
-               title="Update"
-               hide-footer>
-        <b-form @submit="onUpdateSubmit" @reset="onUpdateReset" class="w-100">
-        <b-form-group id="form-update-description-group"
-                      label="Описание:"
-                      label-for="form-update-description-input">
-          <b-form-input id="form-update-description-input"
-                        type="text"
-                        v-model="updateTodoForm.description"
-                        required>
-          </b-form-input>
-        </b-form-group>
-        <b-form-group id="form-update-complete-group">
-          <b-form-checkbox-group v-model="updateTodoForm.is_completed" id="form-update-checks">
-            <b-form-checkbox value="true">Задача выполнена?</b-form-checkbox>
-          </b-form-checkbox-group>
-        </b-form-group>
-        <b-button-group>
-          <b-button type="submit" variant="primary">Обновить</b-button>
-          <b-button type="reset" variant="danger">Сброс</b-button>
-        </b-button-group>
-        </b-form>
-      </b-modal>
+
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
-import Confirmation from './Confirmation.vue';
 
-const dataURL = 'http://localhost:5000/api/tasks/';
+import Confirmation from './Confirmation.vue';
 
 export default {
   name: 'Todo',
   data() {
     return {
       todos: {},
-      addTodoForm: {
-        description: '',
-        is_completed: [],
-      },
       updateTodoForm: {
-        uid: 0,
-        description: '',
-        is_completed: [],
       },
       confirmationMessage: '',
       showConfirmation: false,
@@ -144,81 +139,47 @@ export default {
         if (localStorage.getItem(key) == "SILENT") continue;
         this.todos[key] = localStorage.getItem(key);
       }
-      // console.log(this.todos);
-
-      
-      // this.todos = localStorage.getItem('lol1');
-      // console.log(this.todos)
-
-    },
-    resetForm() {
-      this.addTodoForm.description = '';
-      this.addTodoForm.is_completed = [];
-      this.updateTodoForm.description = '';
-      this.updateTodoForm.is_completed = [];
     },
     onSubmit(event) {
-      // console.log(event);
-
       event.preventDefault();
       this.$refs.addTodoModal.hide();
-      // description1 = event.currentTarget[0].value;
-      // is_completed1 = event.currentTarget[2].checked;
-
-      // description1 = this.addTodoForm.description;
-      // is_completed1 = this.addTodoForm.is_completed[0];
-
-      let p = localStorage.length + ''
-      console.log(typeof p)
-
+      let id_uid = (~~(Math.random()*1e8)).toString(16);
       let array = [event.currentTarget[0].value, event.currentTarget[2].checked];
-      localStorage.setItem(p, array);
-      // localStorage.setItem(event.currentTarget[0].value, event.currentTarget[2].checked);
-
+      localStorage.setItem(id_uid, array);
       this.confirmationMessage = `Задача "${event.currentTarget[0].value}" добавлена`;
       this.showConfirmation = true;
-      this.resetForm();
       this.getTodos()
     },
     onReset(event) {
       event.preventDefault();
       this.$refs.addTodoModal.hide();
-      this.resetForm();
     },
-    updateTodo(todo) {
-      this.updateTodoForm = todo;
+    updateTodo(index) {
+      this.updateTodoForm[index] = localStorage.getItem(index);
+      // console.log(this.updateTodoForm);
     },
     onUpdateSubmit(event) {
       event.preventDefault();
       this.$refs.updateTodoModal.hide();
-      const requestData = {
-        description: this.updateTodoForm.description,
-        is_completed: this.updateTodoForm.is_completed[0],
-      };
-      const todoURL = dataURL + this.updateTodoForm.uid;
-      axios.put(todoURL, requestData)
-        .then(() => {
-          this.getTodos();
-          this.confirmationMessage = 'Задача обновлена';
-          this.showConfirmation = true;
-        });
+      for (let key in this.updateTodoForm){
+        localStorage.setItem(key, [event.currentTarget[0].value, event.currentTarget[2].checked])
+      } 
+      this.updateTodoForm = {};
+      this.confirmationMessage = 'Задача обновлена';
+      this.showConfirmation = true;
+      this.getTodos();
     },
     onUpdateReset(event) {
       event.preventDefault();
       this.$refs.updateTodoModal.hide();
-      this.resetForm();
     },
     deleteTodo(index) {
       console.log(index);
       localStorage.removeItem(index)
-      localStorage.index = 'del';
-
-
+      // location.reload();
       this.confirmationMessage = 'Задача удалена из списка';
       this.showConfirmation = true;
-      this.resetForm();
       this.getTodos()
-
     },
   },
   components: {
@@ -236,7 +197,7 @@ button#task-add {
   margin-bottom: 20px;
 }
 h1, td {
-  text-align: left;
+  text-align: center;
 }
 .todo-uid {
   text-align: right;
